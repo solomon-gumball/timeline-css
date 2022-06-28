@@ -1,0 +1,86 @@
+
+.flexRow {
+  display: flex;
+  flex-direction: row;
+}
+
+.addAnimationButton {
+  margin-left: auto;
+  color: white;
+}
+
+.flexColumn {
+  display: flex;
+  flex-direction: column;
+}
+
+.centeredAbsolute {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+h1, h2, h3 {
+  font-family: 'Space Mono';
+  margin: 0px;
+}
+
+input {
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: transparent;
+  font-size: 12px;
+  outline: none;
+  box-shadow: none;
+  border: none;
+  font-family: 'Space Mono';
+}
+
+button {
+  border: none;
+  cursor: pointer;
+  background-color: transparent;
+  text-align: left;
+  padding: 0px;
+  font-family: 'Space Mono';
+  font-weight: normal;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+*::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+* {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+$tablet-width: 768px;
+$desktop-width: 1024px;
+
+@mixin tablet-size {
+  @media (min-width: 0px) and (max-width: #{$tablet-width - 1px}) {
+    @content;
+  }
+}
+
+@mixin notch-arrow($color, $top: calc(100% - 1px)) {
+  &::before {
+    content: "";
+    width: 4px;
+    box-sizing: border-box;
+    width: 0; 
+    height: 0; 
+    left: 50%;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid $color;
+    position: absolute;
+    transform: translate(-50%);
+    top: $top;
+    border-radius: 100px;
+  }
+}

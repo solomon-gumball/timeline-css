@@ -1,0 +1,12 @@
+.popoverContainerStyles {
+  overflow: auto;
+}
+.noPointerEvents {
+  pointer-events: none;
+}
+.layerAbsolute {
+  z-index: 100;
+  position: absolute;
+  top: 0px;
+  left: 0px;
+}

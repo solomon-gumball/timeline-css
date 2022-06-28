@@ -1,0 +1,85 @@
+// NOTE: if these rules are causing `npm run build`s to fail locally, it's probably cause you ran
+// `npm install` instead of `NODE_ENV=production npm install`, which installs different dependency trees
+{
+  "extends": ["eslint:recommended", "react-app", "plugin:react/recommended", "plugin:react-hooks/recommended"],
+  "plugins": ["@typescript-eslint"],
+  "ignorePatterns": ["webpack.*.config.js"],
+  "rules": {
+    // Done
+    "react/react-in-jsx-scope": "off",
+    "prefer-spread": "error",
+    "arrow-spacing": "error",
+    "eqeqeq": ["error", "always", { "null": "ignore" }],
+    "no-template-curly-in-string": "error",
+
+    // Bugged
+    "@typescript-eslint/no-unused-expressions": 0, // false positives due to optional chaining
+
+    "import/no-anonymous-default-export": 0,
+
+    // Transition Priority 1
+    "no-var": "warn",
+    "no-duplicate-imports": "warn",
+
+    // Transition Priority 2
+    "@typescript-eslint/no-require-imports": "warn",
+    "global-require": "warn",
+    "no-undef": 0, // incompatible with typescript. however, it does seem to catch things that typescript doesnt
+    "no-use-before-define": 0, // for @typescript-eslint/no-use-before-define
+    "@typescript-eslint/no-use-before-define": "warn", // sometimes gives false positives https://github.com/typescript-eslint/typescript-eslint/issues/1856
+    "prefer-const": "warn",
+    "no-unused-vars": 0, // turned off in favor of @typescript-eslint/no-unused-vars
+    "@typescript-eslint/no-unused-vars": "warn",
+    "indent": ["warn", 2, { "SwitchCase": 1 }],
+    "react/no-unescaped-entities": ["warn", { "forbid":  [ // overrides plugin:react/recommended
+      {
+        "char": ">",
+        "alternatives": ["&gt;"]
+      }, {
+        "char": "}",
+        "alternatives": ["&#125;"]
+      }
+    ]}],
+
+    // Transition Priority 3
+    "no-console": ["warn", { "allow": ["info", "warn", "error"] }],
+    "import/order": ["warn", { "groups": [["builtin", "external", "internal"]] }],
+    "no-trailing-spaces": "warn",
+    "comma-dangle": ["warn", {
+      "arrays": "always-multiline",
+      "objects": "always-multiline",
+      "imports": "always-multiline",
+      "exports": "always-multiline",
+      "functions": "always-multiline"
+    }],
+    "prefer-template": "warn",
+    "template-curly-spacing": ["warn", "never"],
+    "react/jsx-no-useless-fragment": "warn",
+    "react/jsx-fragments": ["warn", "syntax"],
+    "quotes": ["warn", "single"],
+    "jsx-quotes": ["warn", "prefer-double"],
+    "semi": ["warn", "never"],
+    "no-unneeded-ternary": "warn",
+    "no-nested-ternary": "warn",
+    "react/prop-types": "warn",
+    "operator-linebreak": "off",
+    "no-multiple-empty-lines": ["warn", { "max": 2, "maxBOF": 0, "maxEOF": 0 }],
+    "@typescript-eslint/member-delimiter-style": ["warn", {
+      "multiline": {
+        "delimiter": "comma",
+        "requireLast": true // behaves like comma-dangle
+      },
+      "singleline": {
+        "delimiter": "comma",
+        "requireLast": false
+      }
+    }],
+    "prefer-object-spread": "warn"
+
+    // Transition Priority 4
+    // "@typescript-eslint/prefer-enum-initializers": "error",
+
+    // Removed
+    // "react/jsx-boolean-value": ["warn", "always"],
+  }
+}

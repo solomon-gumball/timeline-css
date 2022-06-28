@@ -1,0 +1,252 @@
+.modalBackground {
+  position: fixed;
+  top: 0px;
+  left: 0px;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1000000;
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+.modalInputLabel {
+  text-align: left;
+  color: gray;
+  margin-bottom: 2px;
+  font-size: 14px;
+}
+
+.modalHotkeyRow {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.modalHotkeyLabel {
+  color: white;
+}
+
+.actionButton {
+  color: gray;
+  border-radius: 2px;
+  font-weight: bold;
+  padding: 10px 16px;
+  font-size: 16px;
+  min-width: 100px;
+  text-align: center;
+}
+
+.actionButton:hover {
+  color: white;
+  // background-color: ;
+  // background-color: rgba(255, 255, 255, 0.1);
+}
+
+.destructiveButton {
+  background-color: transparent;
+  border: 1px solid orangered;
+  color: orangered !important;
+}
+
+.destructiveButton:hover {
+  color: black !important;
+  background-color: orangered !important;
+}
+
+.defaultButton {
+  background-color: slateblue;
+  color: white !important;
+}
+
+.defaultButton:hover {
+  // background-color: #325b61;
+  background-color: slateblue;
+}
+
+.modalInput {
+  display: block;
+  width: 450px;
+  font-weight: bold;
+  font-size: 22px;
+  color: hotpink;
+}
+
+.checkbox {
+  display: block;
+  width: 400px;
+  max-width: 80%;
+  font-weight: bold;
+  font-size: 22px;
+  color: hotpink;
+}
+
+.modalInput::placeholder,
+.modalInput::-ms-input-placeholder,
+.modalInput::-ms-input-placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
+  color: hotpink;
+  opacity: 0.5; /* Firefox */
+}
+
+.actionButtonRow {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 32px;
+}
+
+.previewStartTimeSlider {
+  width: 100%;
+}
+
+.modalHeader {
+  font-weight: bold;
+  font-size: 18px;
+  margin-bottom: 10px;
+  // font-weight: bold;
+  color: white;
+  text-align: center;
+}
+
+.modalCloseButton {
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  padding: 8px 12px;
+}
+
+.modalCloseButton:hover {
+  color: lightgray;
+}
+
+.modalBody {
+  color: gray;
+  display: flex;
+  flex-direction: column;
+  padding: 30px 20px;
+  min-width: 280px;
+  background-color: #1a1a23;
+  border-radius: 4px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 20px;
+}
+
+.slidecontainer {
+  width: 100%;
+}
+
+.expandableContainer {
+  overflow-y: hidden;
+}
+
+.moreOptionsLabel {
+  color: gray;
+  text-align: center;
+  margin-top: 8px;
+}
+
+.slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 10px;
+  background: gray;
+  outline: none;
+  opacity: 0.7;
+  margin-left: 0px;
+  margin-right: 0px;
+  -webkit-transition: .2s;
+  transition: opacity .2s;
+}
+
+.slider:hover {
+  opacity: 1;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 21px;
+  height: 21px;
+  background: hotpink;
+  cursor: pointer;
+}
+
+.slider::-moz-range-thumb {
+  width: 21px;
+  height: 21px;
+  background: #04AA6D;
+  cursor: pointer;
+}
+
+/* Customize the label (the container) */
+.labelContainer {
+  display: block;
+  position: relative;
+  padding-left: 30px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  font-size: 16px;
+  box-sizing: border-box;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  text-align: left;
+}
+
+/* Hide the browser's default checkbox */
+.labelContainer input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+/* Create a custom checkbox */
+.checkmark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 17px;
+  width: 17px;
+  border: 2px solid gray;
+}
+
+/* On mouse-over, add a grey background color */
+.labelContainer:hover input ~ .checkmark {
+  border: 2px solid hotpink;
+}
+
+/* When the checkbox is checked, add a blue background */
+.labelContainer input:checked ~ .checkmark {
+  background-color: hotpink;
+  border: 2px solid transparent;
+}
+
+/* Create the checkmark/indicator (hidden when not checked) */
+.checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+}
+
+/* Show the checkmark when checked */
+.labelContainer input:checked ~ .checkmark:after {
+  display: block;
+}
+
+/* Style the checkmark/indicator */
+.labelContainer .checkmark:after {
+  left: 5px;
+  top: 1px;
+  width: 4px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 3px 3px 0;
+  -webkit-transform: rotate(45deg);
+  -ms-transform: rotate(45deg);
+  transform: rotate(45deg);
+}

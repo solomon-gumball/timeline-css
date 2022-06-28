@@ -1,0 +1,439 @@
+@import './shared.scss';
+
+$ANIM_ITEM_WIDTH: 175px;
+
+.container {
+  will-change: height;
+  height: 0px;
+  transition: height 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+  border-radius: 5px;
+  z-index: 100;
+  bottom: 0px;
+  left: 0px;
+  width: 100%;
+  font-family: 'Space Mono';
+}
+
+.tickContainer {
+  height: 20px;
+  position: sticky;
+  top: 0px;
+  background-color: rgb(24, 24, 24);
+  z-index: 1;
+  cursor: crosshair;
+  flex-shrink: 0;
+}
+
+.zoomHeadPopover {
+  z-index: -1;
+  background-color: white;
+  color: black;
+  font-weight: bold;
+  font-size: 12px;
+  cursor: grab;
+  padding: 4px;
+  border-radius: 2px;
+}
+
+.zoomHead {
+  @include notch-arrow(white, -1px);
+
+  z-index: 2;
+  width: 0px;
+  border-radius: 3px;
+  border: 1px dashed rgba(255, 255, 255, 0.5);
+  position: absolute;
+  margin-right: 1px;
+  will-change: transform;
+  top: 0px;
+}
+
+.timelineButtonsContainer {
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  bottom: calc(100% + 3px);
+  left: 3px;
+  width: 150px;
+}
+
+.timelineButtonsContainerSecondary {
+  right: 0px;
+  left: unset;
+}
+
+.buttonSelected {
+  background-color: #5FC3EB !important;
+  color: #5FC3EB !important;
+}
+
+.buttonRow {
+  display: flex;
+  flex-direction: row;
+}
+
+.timelineButton:hover {
+  background-color: #2d3352;
+}
+
+.timelineButton {
+  flex-grow: 1;
+  cursor: pointer;
+  margin: 3px;
+  background-color: #181b2b;
+  border-radius: 4px;
+  border: none;
+  padding: 5px 8px;
+  color: #5FC3EB;
+}
+.propertyRowsOverlay {
+  position: sticky;
+  left: 0px;
+  margin-top: 1px;
+  width: 125px;
+  background-color: rgb(35 38 49);
+  height: 100%;
+}
+.timelineBackgroundSVG {
+  position: absolute;
+  width: 100%;
+  /* height: 100%; */
+  height: 0px;
+  flex-grow: 1;
+  background-color: #282a36;
+}
+
+.tick:before {
+  content: "";
+  border-left: 1px solid rgb(120, 120, 120);
+  top: 8px;
+  height: 8px;
+  left: 0px;
+  position: absolute;
+}
+
+.panelButtonSelect {
+  padding: 3px 5px;
+  font-size: 12px;
+  border: none;
+  color: gray;
+  background-color: rgb(24, 24, 24);
+  font-family: 'Space Mono';
+  border-top-right-radius: 4px;
+  border-top-left-radius: 4px;
+  margin-right: 8px;
+  /* pointer-events: none; */
+}
+
+/* .panelButtonSelect {
+  font-family: 'Space Mono';
+  background-color: transparent;
+  border: none;
+  padding: 2px;
+  color: gray;
+} */
+
+.tick {
+  user-select: none;
+  color: rgb(120, 120, 120);
+  pointer-events: none;
+  position: absolute;
+  padding-left: 7px;
+  padding-bottom: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  top: 4px;
+}
+.timelineAxis {
+  position: relative;
+  height: 100px;
+}
+.container {
+  will-change: height;
+  height: 0px;
+  transition: height 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+  /* border-radius: 5px; */
+  bottom: 0px;
+  left: 0px;
+  width: 100%;
+}
+.containerTransitionIn {
+  transition: '';
+}
+.panelContainer {
+  position: absolute;
+  /* padding-left: 10px;
+  padding-right: 10px; */
+  display: flex;
+  flex-direction: column;
+  left: 0px;
+  right: 0px;
+  bottom: 0px;
+  overflow: auto;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.resizeHandle:after {
+  content: '•••';
+  color: #5FC3EB;
+  font-size: 10px;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  top: 50%;
+  left: 50%;
+}
+
+.resizeHandle {
+  width: 40px;
+  height: 10px;
+  cursor: row-resize;
+  background-color: #232840;
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* :export {
+  timelineBarSize: 20px;
+  animItemWidth: 20px;
+} */
+
+.featureLabel {
+  margin-top: 3px;
+  font-weight: 500;
+  font-size: 12px;
+  padding-left: 18px;
+  margin-left: -18px;
+}
+
+.backgroundElement {
+  border-top: 1px solid white;
+  // background-color: #232840;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  // border-top-right-radius: 5px;
+  // border-bottom-right-radius: 5px;
+  /* left: -15px; */
+  left: 0px;
+  top: 0px;
+  z-index: -1;
+}
+
+.innerButtonCircle {
+  height: 8px;
+  width: 8px;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: none;
+  border-radius: 100%;
+}
+
+.animationNameTextArea {
+  font-style: italic;
+  min-height: 12px;
+  pointer-events: none;
+  height: 12px;
+  font-size: 13px;
+  border: none;
+  resize: none;
+  padding-top: 0px;
+  min-width: 0px;
+  text-align: right;
+  padding-bottom: 0px;
+  flex-shrink: 1;
+  flex-grow: 1;
+  flex-basis: 0;
+  padding-left: 10px;
+  font-weight: 700;
+  background-color: transparent;
+}
+
+.graphSectionHeader {
+  cursor: move;
+  opacity: 0.1;
+  color: white;
+}
+
+.resizeColRect {
+  stroke-width: 1px;
+  fill: white;
+  width: 10px;
+  opacity: 0;
+  cursor: col-resize;
+}
+
+.resizeColRect:hover {
+  opacity: 0.1;
+}
+
+.iterationGroup {
+  // transform-origin: 50%;
+  pointer-events: none;
+  transform-box: fill-box;
+}
+
+.headerGroup:hover .graphSectionHeader {
+  opacity: 0.2;
+}
+
+.graphSectionHeader:active {
+  opacity: 0.5 !important;
+}
+
+.graphSectionHeaderSelected {
+  opacity: 0.5 !important;
+}
+
+.graphSectionHeaderLabel {
+  /* fill: white; */
+}
+
+.headerGroup:hover .graphSectionHeaderLabel {
+  opacity: 1;
+  fill: black;
+}
+
+.graphSectionHeader:hover {
+  opacity: 1;
+  color: black;
+}
+
+.graphSectionHeader:hover * {
+}
+
+.gripHandleIcon {
+  width: 20px;
+  height: 16px;
+  color: gray;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.dragHandle {
+  position: absolute;
+  right: 0px;
+  bottom: 100%;
+  margin-right: 15px;
+  /* height: 10px; */
+  padding: 2px;
+  cursor: grab;
+  width: 30px;
+  height: 16px;
+  background-color: rgb(24, 24, 24);
+  border-top-right-radius: 5px;
+  border-top-left-radius: 5px;
+}
+
+.rowSizeButton {
+  display: inline-block;
+  margin-right: 3px;
+  opacity: 1;
+  width: 13px;
+  margin-left: 10px;
+  height: 13px;
+  position: relative;
+  background: none;
+  border-radius: 100%;
+}
+
+.rowHeaderButton {
+  padding: 0px;
+  text-align: left;
+  border: none;
+  position: relative;
+  width: 100%;
+  flex-shrink: 0;
+  flex-grow: 0;
+}
+
+.rowTarget {
+  border-width: 1px;
+  border-style: solid;
+  width: 100%;
+  text-align: right;
+  font-size: 12px;
+  font-weight: bold;
+  border-radius: 3px;
+  height: 24px;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-color: rgb(80, 80, 80);
+  border: none;
+  color: rgb(40, 40, 40);
+  padding-right: 25px;
+  margin-bottom: 4px;
+}
+
+.panelButtonsContainer {
+  position: absolute;
+  bottom: 100%;
+  margin-left: 15px;
+  left: 0;
+}
+
+.headerRowButton {
+  width: 100%;
+  display: block;
+  line-height: 15px;
+  color: black;
+  font-size: 11px;
+}
+
+.headerRowButton:hover {
+  text-decoration: underline;
+}
+
+.rowHeader {
+  padding: 0px;
+  white-space: break-spaces;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  font-weight: bold;
+  color: black;
+  display: inline-block;
+  padding: 2px 8px;
+}
+
+.rowHeaderBorder {
+  width: 100%;
+  bottom: 0px;
+  position: absolute;
+  left: 0px;
+  height: 1px;
+  filter: brightness(80%);
+}
+
+.rowItemContainer {
+  /* padding-right: 20px; */
+  /* padding: 2px 8px; */
+  box-sizing: border-box;
+  font-size: 12px;
+  font-weight: bold;
+  position: relative;
+  border-right: 1px solid rgb(50, 50, 50);
+  // border-bottom: 1px solid rgb(50, 50, 50);
+  display: flex;
+  flex-direction: column;
+  /* align-items: flex-end; */
+}
+
+.addTargetButton {
+  position: absolute;
+  top: 0px;
+  right: 15px;
+  width: 15px;
+  background: none;
+  font-size: 16px;
+  font-weight: 500;
+  border: none;
+  appearance: none;
+}
