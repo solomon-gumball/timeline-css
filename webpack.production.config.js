@@ -20,6 +20,8 @@ module.exports = {
     new webpack.EnvironmentPlugin({
       NODE_ENV: 'production',
       SENTRY_RELEASE,
+      SENTRY_DSN: process.env.SENTRY_DSN,
+      OFFLINE_MODE: 'false',
     }),
     new SentryWebpackPlugin({
       org: 'timelinecss',

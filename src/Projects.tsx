@@ -21,7 +21,6 @@ export default function Projects() {
   function onCreateNewProject() {
     setUpsertData({ type: 'INSERT', project: { source: { html: starterProject.htmlSource, css: starterProject.cssSource } } })
   }
-
   return (
     <div className={styles.container}>
       <AppHeader />
@@ -30,22 +29,32 @@ export default function Projects() {
           <div style={{ color: 'white', fontSize: 28, fontWeight: 'bold', marginBottom: 4, textShadow: '2px 2px #5b5b5b' }}>TimelineCSS</div>
           <div style={{ color: 'gray', fontSize: 12, marginBottom: 14 }}>{'code driven animation editor'}</div>
         </div>
-        {!session.user && (
-          <a
-            href={'p/draft'}
-            className={css(styles.addAnimationButton)}
-          >
-            {session.username ? 'Sandbox' : 'Sandbox'}
-          </a>
-        )}
-        {session.user && (
-          <button
-            className={css(styles.addAnimationButton)}
-            onClick={onCreateNewProject}
-          >
+        <div className={classNames(sharedStyles.flexRow)} style={{ marginLeft: 'auto', gap: 10 }}>
+          {!session.user && !session.offlineMode && (
+            <a
+              href={'/oauth'}
+              className={css(styles.addAnimationButton)}
+            >
+            Sign in
+            </a>
+          )}
+          {!session.user && (
+            <a
+              href={'p/draft'}
+              className={css(styles.addAnimationButton)}
+            >
+            Sandbox
+            </a>
+          )}
+          {session.user && (
+            <button
+              className={css(styles.addAnimationButton)}
+              onClick={onCreateNewProject}
+            >
             New Project
-          </button>
-        )}
+            </button>
+          )}
+        </div>
       </div>
       <div className={classNames(sharedStyles.flexRow, styles.navRow)}>
         {!session.offlineMode && (
@@ -66,6 +75,9 @@ export default function Projects() {
         <NavLink end to="/about" className={({ isActive }) => classNames(styles.tabLink, isActive ? styles.activeTabLink : styles.inactiveTabLink)}>
           <h1 className={styles.projectsHeader}>how it works</h1>
         </NavLink>
+        <a target="_blank" href="https://github.com/solomon-gumball/timeline-css" className={classNames(styles.tabLink, styles.inactiveTabLink)} rel="noreferrer">
+          <h1 className={styles.projectsHeader}>github</h1>
+        </a>
         {upsertData && (
           <UpsertAnimationModal
             data={upsertData}

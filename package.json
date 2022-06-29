@@ -24,9 +24,9 @@
     "uuid": "^8.3.2"
   },
   "scripts": {
-    "start": "OFFLINE_MODE=true && NODE_ENV=development && npx webpack serve --config webpack.development.config.js",
-    "start:bundle": "OFFLINE_MODE=false && NODE_ENV=development webpack --config webpack.development.config.js --watch",
-    "build": "OFFLINE_MODE=false && NODE_ENV=production && npx webpack --config webpack.production.config.js"
+    "start": "OFFLINE_MODE=true NODE_ENV=development npx webpack serve --config webpack.development.config.js",
+    "start:bundle": "OFFLINE_MODE=false NODE_ENV=development webpack --config webpack.development.config.js --watch",
+    "build": "OFFLINE_MODE=false NODE_ENV=production npx webpack --config webpack.production.config.js"
   },
   "browserslist": {
     "production": [

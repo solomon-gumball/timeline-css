@@ -3,8 +3,7 @@ import React, { useEffect, useState } from 'react'
 import Editor from './Editor'
 import Projects from './Projects'
 import { API } from '../types'
-import { useLocalStorage } from './util/storage'
-import { useCookie } from './util/storage'
+import { useLocalStorage, useCookie } from './util/storage'
 
 export type Project = { css: string, html: string }
 export type ProjectsById = { [projectId: string]: Project }
@@ -117,7 +116,10 @@ function App() {
   useEffect(() => {
     // No server, this is client only dev build version
     if (OFFLINE_MODE) {
-      return setUsername(undefined)
+      setUsername(undefined)
+      setUser(undefined)
+      setStars(undefined)
+      return
     }
     // Not logged in
     if (username == null) {

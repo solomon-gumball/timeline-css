@@ -85,7 +85,7 @@ export default function ControlPanel({ dispatch, onResize, totalLengthMs, styleR
     panelContainerRef.current.scrollLeft = (
       scaleX(playState.offsetTime ?? 0) - ((panelContainerRef.current.clientWidth - ANIM_ITEM_WIDTH) * 0.5)
     )
-  }, [scaleX, scrollToTimeRef.current])
+  }, [controls, scaleX])
 
   useEffect(() => {
     function handleKeypress(e: KeyboardEvent) {
@@ -134,7 +134,7 @@ export default function ControlPanel({ dispatch, onResize, totalLengthMs, styleR
     }
     updatePlayState(playState)
     return controls.current.onChange(updatePlayState)
-  }, [controls.current, scaleX, playState, timelineDuration])
+  }, [scaleX, playState, timelineDuration, controls])
 
   const onResizeDrag = useMemo(() => drag(() => {
     return {
