@@ -1,5 +1,5 @@
 # TimelineCSS
-TimelineCSS animation web client 👉 https://timelinecss.io
+TimelineCSS animation web client 👉 https://www.timelinecss.io
 
 <img width="1792" alt="image" src="https://user-images.githubusercontent.com/5566649/176081850-56870966-bee6-4dfc-bef3-65464d079f24.png">
 
