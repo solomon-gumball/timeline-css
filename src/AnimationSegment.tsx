@@ -3,11 +3,12 @@ import { ScaleLinear, scaleLinear } from 'd3-scale'
 import { clamp, cloneDeep, range } from 'lodash'
 import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { RowSize } from './ControlPanel'
-import { StyleRule, StoreDispatch, TimelineKeyframe } from './Editor'
+import { StyleRule, TimelineKeyframe } from './Editor'
 import { css } from './util'
 import drag from './util/drag'
 import { useKeysPressed } from './util/keys'
 import styles from './css/control-panel.scss'
+import { StoreDispatch } from './core/editorControls'
 
 export interface GraphLineProps {
   scaleX: ScaleLinear<number, number>,

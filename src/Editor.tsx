@@ -1,15 +1,15 @@
 import { debounce, range, camelCase } from 'lodash'
 import { LRLanguage, syntaxTree } from '@codemirror/language'
+import { cssLanguage } from '@codemirror/lang-css'
 import { undo } from '@codemirror/commands'
 import { SyntaxNode } from '@lezer/common'
-import { EditorSelection, TransactionSpec } from '@codemirror/state'
 import { EditorState, EditorView, basicSetup } from '@codemirror/basic-setup'
 import { html } from '@codemirror/lang-html'
 import React, { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { Link, useParams, useNavigate, useMatch } from 'react-router-dom'
 import styles from './css/editor.scss'
 import sharedStyles from './css/shared.scss'
-import { useUpdateTrigger, getColor, classNames, isFirefox } from './util'
+import { getColor, classNames } from './util'
 import { useLocalStorage } from './util/storage'
 
 import ControlPanel from './ControlPanel'
@@ -23,8 +23,10 @@ import starterProject from './projectDefaults'
 import { API, Optional } from '../types'
 import Popover from './Popover'
 import { AnimationUpsert, ErrorModal, GenericPromptModal, HelpModal, LogoutModal, NotFoundModal, PromptLoginModal, UpsertAnimationModal } from './Modals'
-import { AnimationControls, generateAnimationControls, mockAnimationControls } from './animationControls'
-import { EditorEffect, initializeCSSEditor } from './CodeEditor'
+import useTimeline, { ViewState } from './core/editorControls'
+import BezierPlugin from './codemirror/BezierPlugin'
+import ColorPickerPlugin from './codemirror/ColorPickerPlugin'
+import HighlightLine from './codemirror/HighlightLine'
 
 export type TimelineKeyframe = {
   progress: number,
@@ -32,7 +34,7 @@ export type TimelineKeyframe = {
   frame: Keyframe,
 }
 
-type ControlPoints = [[number, number], [number, number]]
+export type ControlPoints = [[number, number], [number, number]]
 
 export const SANDBOX_CONFIG = 'allow-modals allow-pointer-lock allow-popups allow-presentation allow-downloads allow-same-origin allow-top-navigation-by-user-activation'
 type TimelineJumpTerm = 'jump-start' | 'jump-end' | 'jump-none' | 'jump-both'
@@ -65,33 +67,6 @@ export type StyleRule = {
   color: string,
   type: 'animation' | 'transition',
 }
-
-export type ViewState = {
-  styleRules: StyleRule[],
-  totalLengthMs: number,
-  selectedRuleIds: Set<string>,
-}
-
-export type StoreDispatch = {
-  computeRules(rules: CSSRuleList | undefined): void,
-  updateRulePropertyValue(selector: string, replaceNode: ReplaceNodeFn): boolean,
-  getMatchingRuleSyntaxNode(selector: string): {
-      ruleSet: SyntaxNode,
-      block: SyntaxNode,
-  } | null,
-  onChangeDelay(styleRuleId: string, delayMs: number): void,
-  onChangeDuration(styleRuleId: string, durationMs: number): void,
-  highlightRule(rule: StyleRule): void,
-  highlightAnimationSource(rule: StyleRule): void,
-  getMatchingKeyframeSyntaxNode(animationName: string): {
-    ruleSet: SyntaxNode,
-    block: SyntaxNode,
-} | null,
-  removeHighlight(): void,
-  toggleSelectRules(ruleIds: string[]): void,
-  updateEasing(ruleId: string, keyframeIndex: number, curve: [[number, number], [number, number]]): void,
-}
-type ReplaceNodeFn = (propertyName: string, childNodes: SyntaxNode[]) => TransactionSpec | undefined
 
 type Action = (
   { type: 'LOADING_COMPLETE', payload: StorageValue, project: API.UserProjectJoin } |
@@ -252,20 +227,15 @@ type SaveIndicatorStatus = (
 
 export default function Editor() {
   const { projectId: projectIdParam } = useParams()
-  // const { htmlCode, cssCode, setHTMLCode, setCSSCode } = useProject(projectsById[projectId ?? ''])
   const [panelSize, setPanelSize] = useLocalStorage('panelSize', { html: 1, css: 1, preview: 1 })
   const htmlEditorRef = useRef<HTMLDivElement>(null)
   const cssEditorRef = useRef<HTMLDivElement>(null)
-  const iframeRef = useRef<HTMLIFrameElement>(null)
   const timelineContainerRef = useRef<HTMLDivElement>(null)
   const didMount = useRef(false)
-  const [triggerRefresh, refreshCounter] = useUpdateTrigger()
-  const [viewState, setViewState] = useState<ViewState>({ styleRules: [], selectedRuleIds: new Set(), totalLengthMs: 1000 })
   const cssSourceEditor = useRef<{ editor: EditorView, language: LRLanguage }>()
   const htmlSourceEditor = useRef<EditorView>()
   const navigate = useNavigate()
   const [reducerState, reducerDispatch] = useReducer(reducer, initReducerState(projectIdParam))
-  const animationControlsRef = useRef<AnimationControls>(mockAnimationControls())
   const { cssSource, htmlSource, loading, updatedAt, projectType, didInitialSet, remoteUpdatedAt } = reducerState
   const session = useContext(SessionContext)
   const [showPromptCloneAccountRequired, setShowPromptCloneAccountRequired] = useState(false)
@@ -274,13 +244,10 @@ export default function Editor() {
   const [showErrorModal, setShowErrorModal] = useState(false)
   const [cloneProjectData, setCloneProjectData] = useState<{ css: string, html: string }>()
   const [upsertData, setUpsertData] = useState<AnimationUpsert>()
-  const storeRef = useRef<ViewState>(viewState)
-  storeRef.current = viewState
+  const [cssEditorView, setCSSEditorView] = useState<EditorView>()
+  const [htmlEditorView, setHtmlEditorView] = useState<EditorView>()
   const [saveIndicatorStatus, setSaveIndicatorStatus] = useState<SaveIndicatorStatus>()
-
-  useMemo(() => {
-    animationControlsRef.current.updateRules(viewState.styleRules)
-  }, [viewState.styleRules])
+  const { viewState, dispatch, updateIframeEl, triggerRefresh, animationControls } = useTimeline(cssSource, htmlSource, cssEditorView)
 
   const isYourProject = (
     reducerState.projectType === 'LOCAL' || (
@@ -308,16 +275,29 @@ export default function Editor() {
   }, 500, { maxWait: 3000 }), [projectIdParam])
 
   useLayoutEffect(() => {
-    if (loading === false && didInitialSet === false && cssSourceEditor.current && htmlSourceEditor.current) {
-      cssSourceEditor.current.editor.dispatch({
-        changes: [{ from: 0, insert: cssSource }],
-      })
-      htmlSourceEditor.current.dispatch({
-        changes: [{ from: 0, insert: htmlSource }],
-      })
+    if (loading === false && didInitialSet === false && cssEditorView && htmlEditorView) {
+      cssEditorView?.dispatch({ changes: [{ from: 0, insert: cssSource }] })
+      htmlEditorView?.dispatch({ changes: [{ from: 0, insert: htmlSource }] })
       reducerDispatch({ type: 'DID_INITIAL_SET' })
     }
-  }, [loading, cssSource, htmlSource, didInitialSet, cssSourceEditor.current, htmlSourceEditor.current])
+  }, [loading, cssSource, htmlSource, didInitialSet, cssEditorView, htmlEditorView])
+
+  useEffect(() => {
+    return animationControls.onChange(({ status, offsetTime }) => {
+      if (controlStateLabelRef.current == null) { return }
+      switch (status) {
+        case 'paused': {
+          controlStateLabelRef.current.style.color = 'hotpink'
+          controlStateLabelRef.current.innerText = `PAUSED at ${Math.round(offsetTime ?? 0)}ms`
+          break
+        }
+        case 'running': {
+          controlStateLabelRef.current.style.color = 'yellowgreen'
+          controlStateLabelRef.current.innerText = 'RUNNING'
+        }
+      }
+    })
+  }, [animationControls])
 
   useEffect(() => {
     if (projectType === 'LOCAL') { return }
@@ -379,440 +359,6 @@ export default function Editor() {
 
   saveProjectRef.current = saveProject
 
-  const dispatch: StoreDispatch = useMemo(() => ({
-    toggleSelectRules(ruleIds: string[]) {
-      setViewState(prev => {
-        if (ruleIds.length === prev.selectedRuleIds.size) {
-          if (ruleIds.every(existingId => prev.selectedRuleIds.has(existingId))) {
-            return prev
-          }
-        }
-        // TODO: FIX
-        prev.selectedRuleIds = new Set(ruleIds)
-        return { ...prev, selectedRuleIds: new Set(ruleIds) }
-      })
-    },
-    updateEasing(styleRuleId, keyframeIndex, curve) {
-      const matchingRule = storeRef.current.styleRules.find(rule => rule.id === styleRuleId)
-      if (matchingRule == null) { return }
-
-      const keyframe = matchingRule.keyframes[keyframeIndex]
-      const nodes = dispatch?.getMatchingKeyframeSyntaxNode(matchingRule.animationName)
-      if (cssSourceEditor.current == null || keyframe == null) { return }
-      const { language, editor } = cssSourceEditor.current
-      // debugSyntaxTree(editor.state)
-      // TODO: Support to / from
-      const targetStringOffset = `${keyframe.progress * 100}%`
-      const keyframeListNode = nodes?.block.getChild('KeyframeList')
-      let currentNode = keyframeListNode?.firstChild
-      let numberBlock = 0
-      let targetBlock: SyntaxNode | undefined = undefined
-      // debugSyntaxTree(editor.state)
-      while ((currentNode = currentNode?.nextSibling)) {
-        // console.log(currentNode.type.name, currentNode.name, '⚠')
-        if (currentNode.type.name === 'Block') {
-          if (numberBlock > keyframeIndex) {
-            targetBlock = currentNode
-            break
-          } else {
-            continue
-          }
-        }
-        if (currentNode.type.name === 'NumberLiteral' || currentNode.type.name === 'from' || currentNode.type.name === 'to') {
-          numberBlock++
-          continue
-        }
-      }
-      const blockNode = targetBlock
-      if (blockNode == null) {
-        console.warn('no block found')
-        return
-      }
-      const declarationNodes = blockNode?.getChildren('Declaration')
-      const declarationNode = declarationNodes?.find(node => {
-        const nameNode = node.getChild('PropertyName')
-        if (nameNode) {
-          const propName = editor.state.sliceDoc(nameNode.from, nameNode.to)
-          return propName === 'animation-timing-function'
-        }
-      })
-      const propertyValueNode = declarationNode?.getChild(':')?.nextSibling
-      if (propertyValueNode) {
-        editor.dispatch({
-          changes: [{ from: propertyValueNode.from, to: propertyValueNode.to, insert: `cubic-bezier(${curve})` }],
-        })
-      } else {
-        const openBracketNode = blockNode.getChild('{')
-        if (openBracketNode != null) {
-          editor.dispatch({
-            changes: [{ from: openBracketNode.to, insert: `\n    animation-timing-function: cubic-bezier(${curve});` }],
-          })
-        }
-      }
-      // const frameOffsetNodes = keyframeListNode?.getChildren('NumberLiteral', '{')
-      // const frameOffsetNode = frameOffsetNodes?.find(node => {
-      //   const value = editor.state.doc.sliceString(node.from, node.to)
-      //   if (value === targetStringOffset) {
-      //     return true
-      //   }
-      // })
-      // if (frameOffsetNode == null) {
-      //   console.warn('No matching keyframe found')
-      //   return
-      // }
-
-      // let blockNode = null
-      // let nextNode = frameOffsetNode.nextSibling
-      // while (nextNode) {
-      //   if (nextNode.name === 'Block') {
-      //     blockNode = nextNode
-      //     break
-      //   }
-      // }
-      // if (blockNode == null) { return }
-      // const blockNode = frameOffsetNode?
-      // console.log(keyframeListNode?.getChildren('Block', undefined, frameOffsetNode))
-      // frameOffsetNode.getChildren('Block', undefined, frameOffsetNode.type.in)
-
-      // console.log(nodes?.block.getChild('KeyframeList'))
-      dispatch.updateRulePropertyValue(matchingRule.animationName, (propertyName, children) => {
-        if (cssSourceEditor.current == null) { return }
-        const { language, editor } = cssSourceEditor.current
-        let currentAnimationIndex = 0
-
-        switch (propertyName) {
-          case 'animation': {
-            for (const child of children) {
-              if (child.type.name === ',') { currentAnimationIndex++; continue }
-              if (currentAnimationIndex !== matchingRule.animationIndex) { continue }
-              if (child.name === 'CallExpression') {
-                const curveRaw = editor.state.doc.sliceString(child.from, child.to)
-                if (!curveRaw.startsWith('cubic-bezier')) { return }
-                const curveStr = `cubic-bezier(${curve})`
-                return {
-                  selection: { anchor: child.from, head: child.from + (curveStr.length) },
-                  changes: [{ from: child.from, to: child.to, insert: curveStr }],
-                }
-              } else if (child.name === 'ValueName') {
-                const curveName = editor.state.doc.sliceString(child.from, child.to)
-                const curve = NamedCurves[curveName]
-                const curveStr = `  cubic-bezier(${curve})`
-                if (curve != null) {
-                  return {
-                    selection: { anchor: child.from, head: child.from + (curveStr.length) },
-                    changes: [{ from: child.from, to: child.to, insert: curveStr }],
-                  }
-                }
-              }
-            }
-            break
-          }
-        }
-      })
-    },
-    computeRules(rules: CSSRuleList | undefined) {
-      if (rules == null) { return }
-      setViewState(viewState => {
-        const newRules = _computeRules(rules, viewState)
-        return newRules
-      })
-    },
-    updateRulePropertyValue(selector: string, replaceNode: ReplaceNodeFn): boolean {
-      const nodes = dispatch?.getMatchingRuleSyntaxNode(selector)
-      if (nodes != null) {
-        const children = nodes.block.getChildren('Declaration')?.reverse()
-
-        const result = children.reduce<TransactionSpec | undefined>((result, child) => {
-          if (result) { return result }
-          let nextSibling = child.firstChild
-          const editorState = cssSourceEditor.current?.editor.state
-
-          if (nextSibling == null || editorState == null) { return result }
-
-          const propertyName = editorState.sliceDoc(nextSibling.from, nextSibling.to)
-          const candidates: SyntaxNode[] = []
-
-          while ((nextSibling = nextSibling.nextSibling)) {
-            candidates.push(nextSibling)
-          }
-
-          return replaceNode(propertyName, candidates)
-        }, undefined)
-
-        if (result) {
-          cssSourceEditor.current?.editor.dispatch(result)
-          return true
-        }
-      }
-      return false
-    },
-
-    getMatchingKeyframeSyntaxNode(animationName: string): { ruleSet: SyntaxNode, block: SyntaxNode } | null {
-      if (cssSourceEditor.current == null) { return null }
-      const { language, editor } = cssSourceEditor.current
-      const editorState = cssSourceEditor.current?.editor.state
-
-      const tree = syntaxTree(editor.state)
-      function traverse(node: SyntaxNode | null): { ruleSet: SyntaxNode, block: SyntaxNode } | null {
-        if (node == null) { return null }
-
-        // KeyframesStatement keyframes KeyframeName KeyframeList
-        // console.log(node.type.name, editorState?.sliceDoc(node.from, node.to))
-
-        if (node.type.name === 'KeyframesStatement') {
-          const blockNode = node.getChild('KeyframeName')
-          const animName = blockNode && editorState?.sliceDoc(blockNode.from, blockNode.to)
-          if (animName === animationName) {
-            return { ruleSet: node, block: node }
-          }
-        }
-        return (
-          (
-            // console.log('down'),
-            traverse(node.firstChild)
-          ) ||
-          (
-            // console.log('over'),
-            traverse(node.nextSibling)
-          )
-        )
-      }
-      return traverse(tree.topNode)
-    },
-
-    getMatchingRuleSyntaxNode(selector: string): { ruleSet: SyntaxNode, block: SyntaxNode } | null {
-      if (cssSourceEditor.current == null) { return null }
-      const { editor } = cssSourceEditor.current
-
-      const selectorNormalized = selector.replaceAll(' ', '')
-
-      let ruleSetNode: SyntaxNode | undefined
-      let blockNode: SyntaxNode | undefined
-
-      syntaxTree(editor.state).iterate({
-        enter: node => {
-          if (ruleSetNode && blockNode) { return false }
-          if (node.type.name === 'RuleSet') {
-            ruleSetNode = node.node
-          } else if (ruleSetNode && blockNode == null && node.type.name === 'Block') {
-            const selectorText = editor.state.sliceDoc(ruleSetNode.from, node.node.from).replaceAll(/(\n|\s)/g, '')
-            if (selectorText === selectorNormalized) {
-              blockNode = node.node
-              return false
-            }
-          }
-        },
-        leave: node => {
-          if (node.type.name === 'RuleSet' && blockNode == null) {
-            ruleSetNode = undefined
-            blockNode = undefined
-          }
-        },
-      })
-
-      if (ruleSetNode && blockNode) {
-        return { ruleSet: ruleSetNode.node, block: blockNode.node }
-      }
-      return null
-    },
-
-    onChangeDelay(styleRuleId: string, delayMs: number) {
-      const draggedRule = storeRef.current.styleRules.find(rule => rule.id === styleRuleId)
-      if (draggedRule == null) { return }
-      storeRef.current.styleRules.filter(rule => storeRef.current.selectedRuleIds.has(rule.id)).forEach(rule => {
-        const offsetDelay = delayMs - (draggedRule.delay - rule.delay)
-        if (rule.type === 'transition') {
-          dispatch?.updateRulePropertyValue(rule.selector, (propertyName, children) => {
-            let currentAnimationIndex = 0
-            switch (propertyName) {
-              case 'transition': {
-                for (const child of children) {
-                  if (child.type.name === ',') { currentAnimationIndex++; continue }
-                  if (currentAnimationIndex !== rule.animationIndex) { continue }
-                  if (child.name === 'NumberLiteral') {
-                    const nextChild = child.nextSibling
-                    if (nextChild?.type.name === 'NumberLiteral') {
-                      return {
-                        selection: { anchor: nextChild.from, head: nextChild.from + (`${offsetDelay}ms`.length) },
-                        changes: [{ from: nextChild.from, to: nextChild.to, insert: `${offsetDelay}ms` }],
-                      }
-                    } else {
-                      return {
-                        selection: { anchor: child.from, head: child.to },
-                        changes: [{ from: child.to, insert: ` ${offsetDelay}ms` }],
-                      }
-                    }
-                  }
-                }
-                break
-              }
-              case 'transition-delay': {
-                for (const child of children) {
-                  if (child.name === 'NumberLiteral') {
-                    return {
-                      selection: { anchor: child.from, head: child.to },
-                      changes: [{ from: child.from, to: child.to, insert: `${offsetDelay}ms` }],
-                    }
-                  }
-                }
-                break
-              }
-            }
-            return undefined
-          })
-        } else if (rule.type === 'animation') {
-          dispatch?.updateRulePropertyValue(rule.selector, (propertyName, children) => {
-            let currentAnimationIndex = 0
-            switch (propertyName) {
-              case 'animation': {
-                for (const child of children) {
-                  if (child.type.name === ',') { currentAnimationIndex++; continue }
-                  if (currentAnimationIndex !== rule.animationIndex) { continue }
-                  if (child.name === 'NumberLiteral') {
-                    const nextChild = child.nextSibling
-                    if (nextChild != null && nextChild?.type.name === 'NumberLiteral') {
-                      return {
-                        selection: { anchor: nextChild.from, head: nextChild.from + (`${offsetDelay}ms`.length) },
-                        changes: [{ from: nextChild.from, to: nextChild.to, insert: `${offsetDelay}ms` }],
-                      }
-                    } else {
-                      return {
-                        selection: { anchor: child.from, head: child.to },
-                        changes: [{ from: child.to, insert: ` ${offsetDelay}ms` }],
-                      }
-                    }
-                  }
-                }
-                break
-              }
-              case 'animation-delay': {
-                for (const child of children) {
-                  if (child.type.name === ',') { currentAnimationIndex++; continue }
-                  if (currentAnimationIndex !== rule.animationIndex) { continue }
-                  if (child.name === 'NumberLiteral') {
-                    return {
-                      selection: { anchor: child.from, head: child.to + (`${offsetDelay}ms`.length) },
-                      changes: [{ from: child.from, to: child.to, insert: `${offsetDelay}ms` }],
-                    }
-                  }
-                }
-                break
-              }
-            }
-            return undefined
-          })
-        }
-      })
-    },
-
-    onChangeDuration(styleRuleId: string, durationMs: number) {
-      const draggedRule = storeRef.current.styleRules.find(rule => rule.id === styleRuleId)
-      if (draggedRule == null) { return }
-      storeRef.current.styleRules.filter(rule => storeRef.current.selectedRuleIds.has(rule.id)).forEach(rule => {
-        const offsetDuration = Math.max(0, durationMs - (draggedRule.duration - rule.duration))
-        if (rule.type === 'transition') {
-        // rule.cssrule.style.setProperty('transition-duration', `${durationMs}ms`)
-          dispatch?.updateRulePropertyValue(rule.selector, (propertyName, children) => {
-            let currentAnimationIndex = 0
-
-            switch (propertyName) {
-              case 'transition': {
-                for (const child of children) {
-                  if (child.type.name === ',') { currentAnimationIndex++; continue }
-                  if (currentAnimationIndex !== rule.animationIndex) { continue }
-                  if (child.name === 'NumberLiteral') {
-                    return {
-                      selection: { anchor: child.from, head: child.to + (`${offsetDuration}ms`.length) },
-                      changes: [{ from: child.from, to: child.to, insert: `${offsetDuration}ms` }],
-                    }
-                  }
-                }
-                break
-              }
-              case 'transition-duration': {
-                for (const child of children) {
-                  if (child.type.name === ',') { currentAnimationIndex++; continue }
-                  if (currentAnimationIndex !== rule.animationIndex) { continue }
-                  if (child.name === 'NumberLiteral') {
-                    return {
-                      selection: { anchor: child.from, head: child.to + (`${offsetDuration}ms`.length) },
-                      changes: [{ from: child.from, to: child.to, insert: `${offsetDuration}ms` }],
-                    }
-                  }
-                }
-                break
-              }
-            }
-          })
-        } else if (rule.type === 'animation') {
-          dispatch?.updateRulePropertyValue(rule.selector, (propertyName, children) => {
-            let currentAnimationIndex = 0
-
-            switch (propertyName) {
-              case 'animation': {
-                for (const child of children) {
-                  if (child.type.name === ',') { currentAnimationIndex++; continue }
-                  if (currentAnimationIndex !== rule.animationIndex) { continue }
-                  if (child.name === 'NumberLiteral') {
-                    return {
-                      selection: { anchor: child.from, head: child.to + (`${offsetDuration}ms`.length) },
-                      changes: [{ from: child.from, to: child.to, insert: `${offsetDuration}ms` }],
-                    }
-                  }
-                }
-                break
-              }
-              case 'animation-duration': {
-                for (const child of children) {
-                  if (child.type.name === ',') { currentAnimationIndex++; continue }
-                  if (currentAnimationIndex !== rule.animationIndex) { continue }
-
-                  if (child.name === 'NumberLiteral') {
-                    return {
-                      selection: { anchor: child.from, head: child.to + (`${offsetDuration}ms`.length) },
-                      changes: [{ from: child.from, to: child.to, insert: `${offsetDuration}ms` }],
-                    }
-                  }
-                }
-                break
-              }
-            }
-          })
-        }
-      })
-    },
-
-    highlightRule(rule: StyleRule) {
-      const nodes = dispatch?.getMatchingRuleSyntaxNode(rule.selector)
-      if (nodes == null) { return }
-      cssSourceEditor.current?.editor.dispatch({
-        effects: [
-          EditorEffect.Spotlight.of({ from: nodes.ruleSet.from, to: nodes.ruleSet.to }),
-          EditorView.scrollIntoView(EditorSelection.range(nodes.ruleSet.from, nodes.ruleSet.to), { y: 'center' }),
-        ],
-      })
-    },
-
-    highlightAnimationSource(rule: StyleRule) {
-      const nodes = dispatch?.getMatchingKeyframeSyntaxNode(rule.animationName)
-      if (nodes == null) { return }
-      cssSourceEditor.current?.editor.dispatch({
-        effects: [
-          EditorEffect.Spotlight.of({ from: nodes.ruleSet.from, to: nodes.ruleSet.to }),
-          EditorView.scrollIntoView(EditorSelection.range(nodes.ruleSet.from, nodes.ruleSet.to), { y: 'center' }),
-        ],
-      })
-    },
-
-    removeHighlight() {
-      cssSourceEditor.current?.editor.dispatch({
-        effects: [
-          EditorEffect.ClearSpotlight.of(),
-        ],
-      })
-    },
-  }), [])
-
   const editorsAreFocused = useCallback(() => {
     if (cssSourceEditor.current == null || htmlSourceEditor.current == null) { return false }
     return (
@@ -853,7 +399,7 @@ export default function Editor() {
       }
       if (e.key === ' ' && !anEditorIsFocused) {
         e.preventDefault()
-        animationControlsRef.current.toggle()
+        animationControls.toggle()
       }
 
       if (e.key === 'z' && metaPressed) {
@@ -872,82 +418,52 @@ export default function Editor() {
       document.removeEventListener('keyup', handleKeyUp)
       document.removeEventListener('keydown', handleKeypress)
     }
-  }, [cloneProjectData, editorsAreFocused, setPanelSize, upsertData])
+  }, [animationControls, cloneProjectData, editorsAreFocused, setPanelSize, upsertData])
 
   useLayoutEffect(() => {
     if (didMount.current) { return }
     if (htmlEditorRef.current == null || cssEditorRef.current == null) { return }
     didMount.current = true
-
-    htmlSourceEditor.current = new EditorView({
-      state: EditorState.create({
-        extensions: [
-          basicSetup, html(),
-          dracula,
-          EditorView.theme({
-            '&': { height: '100%', 'border-radius': '4px', 'background-color': '#292929' },
-            '.cm-scroller': { 'padding-bottom': '28px' },
-          }),
-          EditorView.updateListener.of(update => {
-            reducerDispatch({ type: 'UPDATE_LOCAL', htmlSource: update.state.sliceDoc() })
-          }),
-        ],
+    setHtmlEditorView(
+      new EditorView({
+        state: EditorState.create({
+          extensions: [
+            basicSetup, html(),
+            dracula,
+            EditorView.theme({
+              '&': { height: '100%', 'border-radius': '4px', 'background-color': '#292929' },
+              '.cm-scroller': { 'padding-bottom': '28px' },
+            }),
+            EditorView.updateListener.of(update => {
+              reducerDispatch({ type: 'UPDATE_LOCAL', htmlSource: update.state.sliceDoc() })
+            }),
+          ],
+        }),
+        parent: htmlEditorRef.current,
       }),
-      parent: htmlEditorRef.current,
-    })
+    )
 
-    const { editor, language } = initializeCSSEditor({
-      element: cssEditorRef.current,
-      onChange: update => {
-        reducerDispatch({ type: 'UPDATE_LOCAL', cssSource: update.state.sliceDoc() })
-      },
-    })
-
-    cssSourceEditor.current = { editor, language }
-  }, [])
-
-  const stylesheetController = useRef<CSSStyleSheet | null>(null)
-  const styleEl = useRef<HTMLStyleElement | null>(null)
-  useLayoutEffect(() => {
-    const iframeEl = iframeRef.current
-
-    if (iframeEl == null) { return }
-    let unsub: (() => void) | undefined = undefined
-    const updateStyleEl = (() => {
-      if (iframeEl.contentDocument == null) { return }
-      const style = document.createElement('style')
-      // WebKit hack :(
-      style.appendChild(document.createTextNode(''))
-      iframeEl.contentDocument?.head.appendChild(style)
-      stylesheetController.current = style.sheet
-      styleEl.current = style
-
-      animationControlsRef.current = generateAnimationControls(iframeEl.contentDocument)
-      unsub = animationControlsRef.current.onChange(({ status, offsetTime }) => {
-        if (controlStateLabelRef.current == null) { return }
-        switch (status) {
-          case 'paused': {
-            controlStateLabelRef.current.style.color = 'hotpink'
-            controlStateLabelRef.current.innerText = `PAUSED at ${Math.round(offsetTime ?? 0)}ms`
-            break
-          }
-          case 'running': {
-            controlStateLabelRef.current.style.color = 'yellowgreen'
-            controlStateLabelRef.current.innerText = 'RUNNING'
-          }
-        }
-      })
-    })
-
-    if (isFirefox()) {
-      iframeEl.addEventListener('load', updateStyleEl)
-    } else {
-      updateStyleEl()
-    }
-
-    return () => {
-      unsub?.()
-    }
+    setCSSEditorView(
+      new EditorView({
+        state: EditorState.create({
+          extensions: [
+            basicSetup,
+            HighlightLine,
+            dracula,
+            cssLanguage,
+            ColorPickerPlugin,
+            BezierPlugin,
+            EditorView.theme({
+              '&': { height: '100%', 'border-radius': '4px', 'background-color': '#292929' },
+            }),
+            EditorView.updateListener.of(update => {
+              reducerDispatch({ type: 'UPDATE_LOCAL', cssSource: update.state.sliceDoc() })
+            }),
+          ],
+        }),
+        parent: cssEditorRef.current,
+      }),
+    )
   }, [])
 
   function onResizeControlPanel(height: number) {
@@ -962,39 +478,6 @@ export default function Editor() {
     const controlPanelHeight = window.innerHeight * 0.4
     container.style.height = `${controlPanelHeight}px`
   }, [])
-
-  const updateHMTL = useCallback((htmlSource: string) => {
-    const documentBody = iframeRef.current?.contentDocument?.body
-    if (documentBody == null) { return }
-    documentBody.innerHTML = htmlSource
-    animationControlsRef.current.reset()
-  }, [])
-
-  const debouncedUpdate = useMemo(() => debounce((html: string) => {
-    updateHMTL(htmlSource)
-  }, 500, { leading: false }), [htmlSource, updateHMTL])
-
-  useLayoutEffect(() => {
-    debouncedUpdate(htmlSource)
-  }, [debouncedUpdate, htmlSource])
-
-  useLayoutEffect(() => {
-    updateHMTL(htmlSource)
-  // This is hard trigger, probably should move to onclick handler
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshCounter, updateHMTL])
-
-  useLayoutEffect(() => {
-    if (styleEl.current != null) {
-      styleEl.current.textContent = ''
-      if (styleEl.current == null) { return }
-      styleEl.current.textContent = cssSource
-      const rules = styleEl.current.sheet?.cssRules
-      if (rules == null) { return }
-
-      setViewState(prev => _computeRules(rules, prev))
-    }
-  }, [cssSource])
 
   useEffect(() => {
     if (!isYourProject) { return }
@@ -1151,7 +634,7 @@ export default function Editor() {
                 )}
               </Popover>
             )}
-            <div ref={controlStateLabelRef} className={styles.floatingLiveContainerButton} onClick={() => animationControlsRef.current.toggle()} style={{ textShadow: '1px 1px black', backgroundColor: 'transparent', marginRight: 8, color: 'greenyellow', height: 20 }}>running</div>
+            <div ref={controlStateLabelRef} className={styles.floatingLiveContainerButton} onClick={() => animationControls.toggle()} style={{ textShadow: '1px 1px black', backgroundColor: 'transparent', marginRight: 8, color: 'greenyellow', height: 20 }}>running</div>
           </div>
           <iframe
             className={styles.liveDemoIframe}
@@ -1159,14 +642,14 @@ export default function Editor() {
             sandbox={SANDBOX_CONFIG}
             title="live code"
             loading="lazy"
-            ref={iframeRef}
+            ref={updateIframeEl}
           />
         </div>
       </div>
       <div className={styles.timelineContainer} ref={timelineContainerRef}>
         <ControlPanel
           onResize={onResizeControlPanel}
-          controls={animationControlsRef}
+          controls={animationControls}
           { ...viewState }
           totalLengthMs={Math.max(viewState.totalLengthMs, 500)}
           dispatch={dispatch}

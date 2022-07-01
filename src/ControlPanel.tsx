@@ -5,7 +5,8 @@ import styles from './css/control-panel.scss'
 import { css, useWindowSize } from './util'
 import drag from './util/drag'
 import { useKeysPressed } from './util/keys'
-import { StoreDispatch, StyleRule, ViewState } from './Editor'
+import { StoreDispatch, ViewState } from './core/editorControls'
+import { StyleRule } from './Editor'
 import GripHandleIcon from './icons/grip.svg'
 import { AnimationControls, PlayState } from './animationControls'
 import Popover from './Popover'
@@ -19,7 +20,7 @@ const MINOR_TICK_RATIO = 2
 interface Props extends ViewState {
   dispatch: StoreDispatch,
   onResize: (height: number) => void,
-  controls: MutableRefObject<AnimationControls>,
+  controls: AnimationControls,
   editorsAreFocused: () => boolean,
 }
 
@@ -74,14 +75,14 @@ export default function ControlPanel({ dispatch, onResize, totalLengthMs, styleR
   const zoomHeadLabelRef = useRef<HTMLDivElement>(null)
   const zoomHeadEl = useRef<HTMLDivElement>(null)
   const selectionBoxCanvasRef = useRef<HTMLCanvasElement>(null)
-  const playState = controls.current.getState()
+  const playState = controls.getState()
   const keysPressed = useKeysPressed()
   const scaleY = useMemo(() => (i: number) => 20 + rowSize * i, [rowSize])
 
   useLayoutEffect(() => {
     if (scrollToTimeRef.current == null || panelContainerRef.current == null) { return }
     scrollToTimeRef.current = undefined
-    const playState = controls.current.getState()
+    const playState = controls.getState()
     panelContainerRef.current.scrollLeft = (
       scaleX(playState.offsetTime ?? 0) - ((panelContainerRef.current.clientWidth - ANIM_ITEM_WIDTH) * 0.5)
     )
@@ -133,7 +134,7 @@ export default function ControlPanel({ dispatch, onResize, totalLengthMs, styleR
       }
     }
     updatePlayState(playState)
-    return controls.current.onChange(updatePlayState)
+    return controls.onChange(updatePlayState)
   }, [scaleX, playState, timelineDuration, controls])
 
   const onResizeDrag = useMemo(() => drag(() => {
@@ -213,17 +214,17 @@ export default function ControlPanel({ dispatch, onResize, totalLengthMs, styleR
     }
   }, 'default'), [scaleX, keysPressed, styleRules, dispatch, scaleY, selectedRuleIds])
 
-  const onDragZoom = useMemo(() => drag((el, startPosition) => {
+  const onDragZoom = useMemo(() => drag((_, startPosition) => {
     const panelEl = panelContainerRef.current
     if (panelEl == null) { return }
     const startScrollOffset = panelEl.scrollLeft
 
     const dragStartTime = scaleX.invert(startPosition[0] - ANIM_ITEM_WIDTH + startScrollOffset)
-    controls.current.pause(dragStartTime)
+    controls.pause(dragStartTime)
     return {
       onDrag: ({ delta, position }) => {
         const xTime = scaleX.invert(position[0] - ANIM_ITEM_WIDTH + startScrollOffset)
-        controls.current.pause(xTime)
+        controls.pause(xTime)
       },
     }
   }, 'grab'), [scaleX, controls])

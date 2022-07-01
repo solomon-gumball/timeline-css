@@ -1,107 +1,99 @@
 import { EditorView } from '@codemirror/view'
-import { useState, useRef, useLayoutEffect, useMemo } from 'react'
+import { useState, useRef, useLayoutEffect, useMemo, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { initializeCSSEditor, EditorEffect } from './CodeEditor'
+import { basicSetup } from '@codemirror/basic-setup'
+import { cssLanguage } from '@codemirror/lang-css'
+import { EditorState } from '@codemirror/state'
+import { EditorEffect } from './CodeEditor'
 import ControlPanel from './ControlPanel'
-import { StoreDispatch, ViewState, _computeRules, SANDBOX_CONFIG } from './Editor'
+import { SANDBOX_CONFIG } from './Editor'
 import { Checkbox } from './Modals'
-import { AnimationControls, mockAnimationControls, generateAnimationControls } from './animationControls'
+import { mockAnimationControls } from './animationControls'
 import { SuggestionsFormLinkFooter } from './Projects'
-import { isFirefox, css } from './util'
+import { css } from './util'
 import dedent from './util/dedent'
 import styles from './css/projects.scss'
 import sharedStyles from './css/shared.scss'
+import useTimeline, { StoreDispatch } from './core/editorControls'
+import BezierPlugin from './codemirror/BezierPlugin'
+import ColorPickerPlugin from './codemirror/ColorPickerPlugin'
+import HighlightLine from './codemirror/HighlightLine'
+import { dracula } from './codeMirrorTheme'
 
 const mockDispatch: StoreDispatch = {
   computeRules: function (): void {},
-  updateRulePropertyValue: () => true,
-  getMatchingRuleSyntaxNode() { return null },
   onChangeDelay() {},
   onChangeDuration() {},
   highlightRule() {},
   highlightAnimationSource() {},
-  getMatchingKeyframeSyntaxNode() { return null },
   removeHighlight() {},
   toggleSelectRules() {},
   updateEasing() {},
 }
 
 export default function HowItWorks() {
-  const [styleEl, setStyleEl] = useState<HTMLStyleElement>()
-  const [offsetFirst, setOffsetFirst] = useState(500)
   const sourceCodeContainerRef = useRef<HTMLDivElement>(null)
+  const [offset, setOffset] = useState(500)
   const [eraseSomeCode, setEraseSomeCode] = useState(false)
-  const sourceCode = generateExampleCSS(offsetFirst, eraseSomeCode)
-  const [cssEditor, setCSSEditor] = useState<EditorView>()
-  const animationControls = useRef<AnimationControls>(mockAnimationControls())
-  const stubbedAnimationControls = useRef<AnimationControls>(mockAnimationControls())
   const [pauseTime, setPauseTime] = useState<number>()
-  const sandboxIframeRef = useRef<HTMLIFrameElement>(null)
+  const [cssEditorView, setCSSEditorView] = useState<EditorView>()
+  const cssSource = useMemo(() => generateExampleCSS(offset, eraseSomeCode), [eraseSomeCode, offset])
+  const { viewState, animationControls, updateIframeEl } = useTimeline(cssSource, html, cssEditorView)
+  const stubbedAnimationControls = useMemo(() => ({
+    ...mockAnimationControls(),
+    getState: animationControls.getState,
+  }), [animationControls.getState])
 
   function _setPauseTime(time?: number) {
     setPauseTime(time)
     if (time != null) {
-      animationControls.current.pause(time)
+      animationControls.pause(time)
     } else {
-      animationControls.current.play()
+      animationControls.play()
     }
   }
 
   useLayoutEffect(() => {
     if (sourceCodeContainerRef.current == null) { return }
-    const { editor } = initializeCSSEditor({
-      editable: false,
-      element: sourceCodeContainerRef.current,
-      onChange: () => {}, styleOverrides: { 'font-size': '14px', 'padding-top': '10px' },
-    })
-    setCSSEditor(editor)
+    setCSSEditorView(
+      new EditorView({
+        state: EditorState.create({
+          extensions: [
+            basicSetup,
+            HighlightLine,
+            dracula,
+            cssLanguage,
+            ColorPickerPlugin,
+            BezierPlugin,
+            EditorView.theme({
+              '&': {
+                height: '100%',
+                'border-radius': '4px',
+                'background-color': '#292929',
+                'font-size': '14px',
+                'padding-top': '10px',
+              },
+            }),
+          ],
+        }),
+        parent: sourceCodeContainerRef.current,
+      }),
+    )
   }, [])
 
-  const viewState = useMemo<ViewState>(() => {
-    if (styleEl == null) { return { colors: [], styleRules: [], totalLengthMs: 1000, selectedRuleIds: new Set() } }
-    styleEl.innerText = sourceCode
-    const rules = styleEl?.sheet?.cssRules
-    if (rules != null) {
-      const newRules = _computeRules(rules)
-      animationControls.current.updateRules(newRules.styleRules)
-      return newRules
-    }
-    return { colors: [], styleRules: [], totalLengthMs: 1000, selectedRuleIds: new Set() }
-  }, [sourceCode, styleEl])
-
-  useMemo(() => {
-    cssEditor?.dispatch({
-      changes: [{ from: 0, to: cssEditor.state.doc.length, insert: sourceCode }],
+  useEffect(() => {
+    cssEditorView?.dispatch({
+      changes: [{ from: 0, to: cssEditorView.state.doc.length, insert: cssSource }],
       selection: { anchor: 193, head: 198 },
       effects: [EditorEffect.Spotlight.of({ from: 193, to: 198 })],
     })
-  }, [cssEditor, sourceCode])
+  }, [cssEditorView, cssSource])
 
-  useLayoutEffect(() => {
-    const iframeEl = sandboxIframeRef.current
-    if (iframeEl == null) { return }
-    const styleEl = document.createElement('style')
-
-    if (iframeEl.contentDocument == null) { return }
-    function iframeReady() {
-      if (iframeEl?.contentDocument == null) { return }
-      styleEl.appendChild(document.createTextNode(''))
-      iframeEl.contentDocument.head.appendChild(styleEl)
-      iframeEl.contentDocument.body.innerHTML = html
-      animationControls.current = generateAnimationControls(iframeEl.contentDocument)
-      stubbedAnimationControls.current = { ...animationControls.current, pause: () => {}, play: () => {}, toggle: () => {} }
-    }
-
-    setStyleEl(styleEl)
+  useEffect(() => {
+    let i = 0
     const interval = setInterval(() => {
-      setOffsetFirst(curr => curr === 500 ? 300 : 500)
+      setOffset(500 + ((i++ % 3) * 500))
     }, 1000)
-
-    if (isFirefox()) {
-      iframeEl.addEventListener('load', iframeReady)
-    } else {
-      iframeReady()
-    }
 
     return () => {
       clearInterval(interval)
@@ -156,7 +148,7 @@ export default function HowItWorks() {
           <div className={styles.pointerArrow} style={{ left: 370, top: 40, height: 80 }}>Grid Snap</div>
           <div style={{ position: 'relative', height: '100%', transformOrigin: '0px 0px', transform: 'translate(0px, 170px) scale(1.4)' }}>
             <ControlPanel
-              dispatch={{} as any}
+              dispatch={mockDispatch}
               onResize={() => {}}
               controls={stubbedAnimationControls}
               {...viewState}
@@ -203,7 +195,7 @@ export default function HowItWorks() {
                 key={time}
                 value={pauseTime === time}
                 onChange={val => _setPauseTime(val ? time : undefined)}
-                label="Pause at 1160ms"
+                label={`Pause at ${time}ms`}
                 name=""
               />
             ))}
@@ -223,7 +215,12 @@ export default function HowItWorks() {
           </div>
         </div>
         <div className={styles.aboutImage}>
-          <iframe className={styles.livePreview} title="live-preview" sandbox={SANDBOX_CONFIG} ref={sandboxIframeRef} />
+          <iframe
+            className={styles.livePreview}
+            title="live-preview"
+            sandbox={SANDBOX_CONFIG}
+            ref={updateIframeEl}
+          />
         </div>
         <div className={css(styles.aboutInstructions)}>
           <b className={css(styles.instructionHeader)}>Live Preview</b>
