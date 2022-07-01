@@ -7,8 +7,8 @@ import sharedStyles from './css/shared.scss'
 import { API } from '../types'
 import { classNames } from './util'
 import { SessionContext } from './App'
-import { ProjectPreview } from './Projects'
 import { FEEDBACK_FORM_URL } from '.'
+import { ProjectPreview } from './ProjectPreview'
 
 export type AnimationUpsert = (
   { type: 'INSERT', project: Partial<API.Project> & { source: API.Project['source'] } } |

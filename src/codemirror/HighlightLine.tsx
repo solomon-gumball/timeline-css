@@ -1,8 +1,8 @@
 import { StateField, Range } from '@codemirror/state'
 import { Decoration, DecorationSet, EditorView } from '@codemirror/view'
 import { range } from 'lodash'
-import { EditorEffect } from '../CodeEditor'
 import styles from '../css/code-editor.scss'
+import EditorEffect from './EditorEffect'
 
 const hideCodeMark = Decoration.mark({ class: styles.hideCode })
 const highlight = Decoration.line({ class: styles.highlightCode })

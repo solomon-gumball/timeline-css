@@ -4,10 +4,10 @@ import { EditorView } from '@codemirror/view'
 import { TransactionSpec, EditorSelection } from '@codemirror/state'
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { debounce } from 'lodash'
-import { EditorEffect } from '../CodeEditor'
-import { ControlPoints, NamedCurves, StyleRule, _computeRules } from '../Editor'
-import { AnimationControls, generateAnimationControls, mockAnimationControls } from '../animationControls'
+import { ControlPoints, NamedCurves, StyleRule, _computeRules } from './parseStylesheet'
+import { AnimationControls, generateAnimationControls, mockAnimationControls } from './animationControls'
 import { isFirefox, useUpdateTrigger } from '../util'
+import EditorEffect from '../codemirror/EditorEffect'
 
 type ReplaceNodeFn = (propertyName: string, childNodes: SyntaxNode[]) => TransactionSpec | undefined
 

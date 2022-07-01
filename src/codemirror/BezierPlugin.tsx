@@ -6,7 +6,7 @@ import { useRef, useState, useMemo, useEffect } from 'react'
 import { Range } from '@codemirror/state'
 
 import { createRoot } from 'react-dom/client'
-import { parseCurve, NamedBezierCurves } from '../Editor'
+import { parseCurve, NamedBezierCurves } from '../core/parseStylesheet'
 import Popover from '../Popover'
 import { classNames } from '../util'
 import drag from '../util/drag'

@@ -1,4 +1,4 @@
-import { StyleRule, parseDurationMs } from './Editor'
+import { StyleRule, parseDurationMs } from './parseStylesheet'
 
 export type PlayState = { status: 'paused' | 'running', offsetTime: number }
 type OnChangeCallback = (state: PlayState) => void

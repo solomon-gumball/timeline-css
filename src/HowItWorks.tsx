@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom'
 import { basicSetup } from '@codemirror/basic-setup'
 import { cssLanguage } from '@codemirror/lang-css'
 import { EditorState } from '@codemirror/state'
-import { EditorEffect } from './CodeEditor'
 import ControlPanel from './ControlPanel'
 import { SANDBOX_CONFIG } from './Editor'
 import { Checkbox } from './Modals'
@@ -19,6 +18,7 @@ import BezierPlugin from './codemirror/BezierPlugin'
 import ColorPickerPlugin from './codemirror/ColorPickerPlugin'
 import HighlightLine from './codemirror/HighlightLine'
 import { dracula } from './codeMirrorTheme'
+import EditorEffect from './codemirror/EditorEffect'
 
 const mockDispatch: StoreDispatch = {
   computeRules: function (): void {},

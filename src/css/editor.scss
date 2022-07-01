@@ -167,49 +167,6 @@
   margin-right: 8px;
 }
 
-.usernameButton {
-  margin-left: 7px;
-  color: gray;
-}
-.usernameButton:hover {
-  color: lightgray;
-}
-
-.dropdownContainer::after {
-  content: "";
-  width: 4px;
-  box-sizing: border-box;
-  width: 0; 
-  height: 0; 
-  left: 100%;
-  border-left: 5px solid transparent;
-  border-right: 5px solid transparent;
-  border-bottom: 5px solid black;
-  position: absolute;
-  transform: translate(-50%);
-  bottom: 100%;
-  /* left: 50%; */
-  /* transform: translate(-50%, -50%); */
-  border-radius: 100px;
-}
-
-.dropdownContainer {
-  position: relative;
-  background-color: black;
-  display: flex;
-  flex-direction: column;
-}
-
-.dropdownItem {
-  padding: 2px 6px;
-  color: gray;
-}
-
-.dropdownItem:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-  color: white;
-}
-
 .pageHeaderRow {
   justify-content: space-between;
   color: gray;
