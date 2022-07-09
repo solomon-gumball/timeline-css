@@ -22,6 +22,7 @@ interface Props extends ViewState {
   onResize: (height: number) => void,
   controls: AnimationControls,
   editorsAreFocused: () => boolean,
+  totalLengthMs: number,
 }
 
 export enum RowSize {

@@ -4,7 +4,7 @@ import { EditorView } from '@codemirror/view'
 import { TransactionSpec, EditorSelection } from '@codemirror/state'
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { debounce } from 'lodash'
-import { ControlPoints, NamedCurves, StyleRule, _computeRules } from './parseStylesheet'
+import { ControlPoints, NamedCurves, StyleRule, computeRules, getMaxRuleLength } from './parseStylesheet'
 import { AnimationControls, generateAnimationControls, mockAnimationControls } from './animationControls'
 import { isFirefox, useUpdateTrigger } from '../util'
 import EditorEffect from '../codemirror/EditorEffect'
@@ -13,12 +13,10 @@ type ReplaceNodeFn = (propertyName: string, childNodes: SyntaxNode[]) => Transac
 
 export type ViewState = {
   styleRules: StyleRule[],
-  totalLengthMs: number,
   selectedRuleIds: Set<string>,
 }
 
 export type StoreDispatch = {
-  computeRules(rules: CSSRuleList | undefined): void,
   onChangeDelay(styleRuleId: string, delayMs: number): void,
   onChangeDuration(styleRuleId: string, durationMs: number): void,
   highlightRule(rule: StyleRule): void,
@@ -29,7 +27,8 @@ export type StoreDispatch = {
 }
 
 export default function useTimeline(cssSource: string, htmlSource: string, editor?: EditorView) {
-  const [viewState, setViewState] = useState<ViewState>({ styleRules: [], selectedRuleIds: new Set(), totalLengthMs: 1000 })
+  const [viewState, setViewState] = useState<ViewState>({ styleRules: [], selectedRuleIds: new Set() })
+  const totalLengthMs = useMemo(() => getMaxRuleLength(viewState.styleRules) || 1000, [viewState.styleRules])
   const [animationControls, setAnimationControls] = useState<AnimationControls>(mockAnimationControls())
   const [iframeEl, updateIframeEl] = useState<HTMLIFrameElement | null>(null)
   const [triggerRefresh, refreshCounter] = useUpdateTrigger()
@@ -90,7 +89,7 @@ export default function useTimeline(cssSource: string, htmlSource: string, edito
       const rules = styleEl.sheet?.cssRules
       if (rules == null) { return }
 
-      setViewState(prev => _computeRules(rules, prev))
+      setViewState(prev => ({ ...prev, styleRules: computeRules(rules) }))
     }
   }, [cssSource, styleEl])
 
@@ -227,6 +226,7 @@ export default function useTimeline(cssSource: string, htmlSource: string, edito
           const propName = editorState.sliceDoc(nameNode.from, nameNode.to)
           return propName === 'animation-timing-function'
         }
+        return false
       })
       const propertyValueNode = declarationNode?.getChild(':')?.nextSibling
       if (propertyValueNode) {
@@ -273,13 +273,6 @@ export default function useTimeline(cssSource: string, htmlSource: string, edito
             break
           }
         }
-      })
-    },
-    computeRules(rules: CSSRuleList | undefined) {
-      if (rules == null) { return }
-      setViewState(viewState => {
-        const newRules = _computeRules(rules, viewState)
-        return newRules
       })
     },
 
@@ -486,5 +479,6 @@ export default function useTimeline(cssSource: string, htmlSource: string, edito
     triggerRefresh,
     updateIframeEl,
     viewState,
+    totalLengthMs,
   }
 }

@@ -1,5 +1,5 @@
 import { debounce } from 'lodash'
-import { LRLanguage, syntaxTree } from '@codemirror/language'
+import { syntaxTree } from '@codemirror/language'
 import { cssLanguage } from '@codemirror/lang-css'
 import { undo } from '@codemirror/commands'
 import { SyntaxNode } from '@lezer/common'
@@ -195,8 +195,6 @@ export default function Editor() {
   const cssEditorRef = useRef<HTMLDivElement>(null)
   const timelineContainerRef = useRef<HTMLDivElement>(null)
   const didMount = useRef(false)
-  const cssSourceEditor = useRef<{ editor: EditorView, language: LRLanguage }>()
-  const htmlSourceEditor = useRef<EditorView>()
   const navigate = useNavigate()
   const [reducerState, reducerDispatch] = useReducer(reducer, initReducerState(projectIdParam))
   const { cssSource, htmlSource, loading, updatedAt, projectType, didInitialSet, remoteUpdatedAt } = reducerState
@@ -210,7 +208,7 @@ export default function Editor() {
   const [cssEditorView, setCSSEditorView] = useState<EditorView>()
   const [htmlEditorView, setHtmlEditorView] = useState<EditorView>()
   const [saveIndicatorStatus, setSaveIndicatorStatus] = useState<SaveIndicatorStatus>()
-  const { viewState, dispatch, updateIframeEl, triggerRefresh, animationControls } = useTimeline(cssSource, htmlSource, cssEditorView)
+  const { viewState, dispatch, updateIframeEl, triggerRefresh, animationControls, totalLengthMs } = useTimeline(cssSource, htmlSource, cssEditorView)
 
   const isYourProject = (
     reducerState.projectType === 'LOCAL' || (
@@ -323,12 +321,12 @@ export default function Editor() {
   saveProjectRef.current = saveProject
 
   const editorsAreFocused = useCallback(() => {
-    if (cssSourceEditor.current == null || htmlSourceEditor.current == null) { return false }
+    if (cssEditorView == null || htmlEditorView == null) { return false }
     return (
-      cssSourceEditor.current.editor.hasFocus ||
-      htmlSourceEditor.current.hasFocus
+      cssEditorView.hasFocus ||
+      htmlEditorView.hasFocus
     )
-  }, [])
+  }, [cssEditorView, htmlEditorView])
 
   useEffect(() => {
     let metaPressed = false
@@ -366,8 +364,8 @@ export default function Editor() {
       }
 
       if (e.key === 'z' && metaPressed) {
-        if (cssSourceEditor.current) {
-          undo(cssSourceEditor.current.editor)
+        if (cssEditorView) {
+          undo(cssEditorView)
         }
       }
     }
@@ -381,7 +379,7 @@ export default function Editor() {
       document.removeEventListener('keyup', handleKeyUp)
       document.removeEventListener('keydown', handleKeypress)
     }
-  }, [animationControls, cloneProjectData, editorsAreFocused, setPanelSize, upsertData])
+  }, [animationControls, cloneProjectData, cssEditorView, editorsAreFocused, setPanelSize, upsertData])
 
   useLayoutEffect(() => {
     if (didMount.current) { return }
@@ -536,7 +534,7 @@ export default function Editor() {
                         html: htmlSource,
                       },
                     },
-                    totalLength: viewState.totalLengthMs,
+                    totalLength: totalLengthMs,
                   })}
                 >
                   {reducerState.remoteProject.name}
@@ -614,7 +612,7 @@ export default function Editor() {
           onResize={onResizeControlPanel}
           controls={animationControls}
           { ...viewState }
-          totalLengthMs={Math.max(viewState.totalLengthMs, 500)}
+          totalLengthMs={Math.max(totalLengthMs, 500)}
           dispatch={dispatch}
           editorsAreFocused={editorsAreFocused}
         />

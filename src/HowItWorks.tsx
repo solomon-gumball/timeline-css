@@ -7,7 +7,7 @@ import { EditorState } from '@codemirror/state'
 import ControlPanel from './ControlPanel'
 import { SANDBOX_CONFIG } from './Editor'
 import { Checkbox } from './Modals'
-import { mockAnimationControls } from './animationControls'
+import { mockAnimationControls } from './core/animationControls'
 import { SuggestionsFormLinkFooter } from './Projects'
 import { css } from './util'
 import dedent from './util/dedent'
@@ -17,11 +17,10 @@ import useTimeline, { StoreDispatch } from './core/editorControls'
 import BezierPlugin from './codemirror/BezierPlugin'
 import ColorPickerPlugin from './codemirror/ColorPickerPlugin'
 import HighlightLine from './codemirror/HighlightLine'
-import { dracula } from './codeMirrorTheme'
+import { dracula } from './codemirror/codeMirrorTheme'
 import EditorEffect from './codemirror/EditorEffect'
 
 const mockDispatch: StoreDispatch = {
-  computeRules: function (): void {},
   onChangeDelay() {},
   onChangeDuration() {},
   highlightRule() {},

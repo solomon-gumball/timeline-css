@@ -1,7 +1,6 @@
 import { range, camelCase } from 'lodash'
 import { Optional } from '../../types'
 import { getColor } from '../util'
-import { ViewState } from './editorControls'
 
 export type TimelineKeyframe = {
   progress: number,
@@ -130,7 +129,7 @@ function serializeEasing(easing: TimelineEasing) {
   return ''
 }
 
-export function _computeRules(rules: CSSRuleList, prevState?: ViewState): ViewState {
+export function computeRules(rules: CSSRuleList): StyleRule[] {
   const keyframeAnimationRules = Array.from(rules).filter((rule): rule is CSSKeyframesRule => rule instanceof CSSKeyframesRule)
   const cssStyleRules = Array.from(rules).filter((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule && !!(rule.style.animationName || rule.style.transitionProperty))
   const animationKeyFrames = keyframeAnimationRules.reduce<{ [animationName: string]: Optional<TimelineKeyframe, 'curve'>[] }>((animations, keyframesRule) => {
@@ -201,6 +200,7 @@ export function _computeRules(rules: CSSRuleList, prevState?: ViewState): ViewSt
       const fillModes = rule.style.animationFillMode.split(', ')
       const curves = splitTimingFunctions(rule.style.animationTimingFunction)
       const iterations = rule.style.animationIterationCount.split(', ')
+
       animationNames.forEach((animationName, j) => {
         const duration = parseDurationMs(durations[j] ?? durations[durations.length - 1]) || 1
         const delay = parseDurationMs(delays[j] ?? delays[delays.length - 1])
@@ -282,7 +282,7 @@ export function _computeRules(rules: CSSRuleList, prevState?: ViewState): ViewSt
     return styleRules
   }, [] as StyleRule[])
 
-  return { selectedRuleIds: prevState?.selectedRuleIds ?? new Set(), styleRules, totalLengthMs }
+  return styleRules
 }
 
 function splitTimingFunctions(timingFnString: string) {
@@ -304,4 +304,10 @@ function splitTimingFunctions(timingFnString: string) {
 
   push()
   return result
+}
+
+export function getMaxRuleLength(rules: StyleRule[]) {
+  return rules.reduce((totalLengthMs, rule) =>
+    Math.max(totalLengthMs, rule.delay + rule.duration * (rule.iterationCount || 1))
+  , 5)
 }

@@ -6,6 +6,19 @@
   color: lightgray;
 }
 
+.pageHeaderRow {
+  justify-content: space-between;
+  color: gray;
+  flex-grow: 0;
+  flex-shrink: 0;
+  height: 20px;
+  font-size: 14px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 4px 14px;
+}
+
 .dropdownContainer::after {
   content: "";
   width: 4px;
